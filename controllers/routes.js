@@ -1,62 +1,68 @@
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
-const dbPath = './api/blog.json'; // i got this from someone in class, but i found and read that the const fs=require('fs') is the same. if understood it correctly?
+const dbPath = './api/blog.json';
 
 
 // READ all blog posts
-router.get('/', (req, res) => {
-  fs.readFile('./api/blog.json', 'utf8', (err, data) => {
-    if (err) {
-      console.error(`Error reading file from disk: ${err}`);
-      res.status(500).send('Server Error');
-    } else {
-      res.json(JSON.parse(data));
-    }
-  });
+// GET - /api/blog - get all blog posts
+router.get('/blog', (req, res) => {
+  try {
+    fs.readFile(dbPath, 'utf8', (err, data) => {
+      if (err) {
+        console.error(`Error reading file from disk: ${err}`);
+        res.status(500).send('Server Error');
+      } else {
+        res.json(JSON.parse(data));
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'error getting all posts' });
+  }
 });
 
-// get all from db - /get/all
-// router.get('/get/all', (req, res) => {
-//   try {
-//     const allPost = read(dbPath);
-//     res.status(200).json(allPost);
-//   } catch (error) {
-//     res.status(500).json({ message: 'error getting all post' });
-//   }
-// });
-
-// get one from db by post_id - /get/one/:post_id
-router.get('/get/one/:post_id', (req, res) => {
+// get one blog post by id
+// GET - /api/blog/:id - get one blog post by ID
+router.get('/blog/:id', (req, res) => {
   try {
-    const postId = req.params.post_id;
-    const allPost = read(dbPath);
-    const onePost = allPost.find((post) => post.post_id.toString() === postId); //finds the post that matches the post_id
-
-    if (!onePost) {
-      return res.status(404).json({ message: 'post not found' }); //error message if post is not found
-    }
+    fs.readFile(dbPath, 'utf8', (err, data) => {
+      if (err) {
+        console.error(`Error reading file from disk: ${err}`);
+        res.status(500).send('Server Error');
+      } else {
+        const blogs = JSON.parse(data);
+        const blog = blogs.find(blog => blog.post_id === parseInt(req.params.id));
+        if (!blog) {
+          res.status(404).json({ message: 'No post found with that ID' });
+        } else {
+          res.json(blog);
+        }
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'error getting one post' });
   }
 });
 
-// CREATE a new blog post
-router.post('/', (req, res) => {
-  fs.readFile('./api/blog.json', 'utf8', (err, data) => {
+// CREATE a new blog post with auto-incremented post_id
+// POST - /api/blog - create a new blog post
+router.post('/blog', (req, res) => {
+  fs.readFile(dbPath, 'utf8', (err, data) => {
     if (err) {
       console.error(`Error reading file from disk: ${err}`);
       res.status(500).send('Server Error');
     } else {
-      const blogs = JSON.parse(data);
+      let blogs = JSON.parse(data);
+      // Determine the new post_id by finding the maximum post_id in the array and adding 1
+      const newPostId = blogs.length === 0 ? 1 : Math.max(...blogs.map(blog => blog.post_id)) + 1;
       const newBlogPost = {
-        post_id: req.body.post_id,
+        post_id: newPostId,
         title: req.body.title,
         author: req.body.author,
         body: req.body.body,
       };
       blogs.push(newBlogPost);
-      fs.writeFile('./api/blog.json', JSON.stringify(blogs, null, 2), (err) => {
+      fs.writeFile(dbPath, JSON.stringify(blogs, null, 2), (err) => {
         if (err) {
           console.error(`Error writing file to disk: ${err}`);
           res.status(500).send('Server Error');
@@ -67,8 +73,6 @@ router.post('/', (req, res) => {
     }
   });
 });
-
-
 
 
 module.exports = router;

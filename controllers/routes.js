@@ -3,7 +3,6 @@ const router = express.Router();
 const fs = require('fs');
 const dbPath = './api/blog.json';
 
-
 // READ all blog posts
 // GET - /api/blog - get all blog posts
 router.get('/blog', (req, res) => {
@@ -31,7 +30,9 @@ router.get('/blog/:id', (req, res) => {
         res.status(500).send('Server Error');
       } else {
         const blogs = JSON.parse(data);
-        const blog = blogs.find(blog => blog.post_id === parseInt(req.params.id));
+        const blog = blogs.find(
+          (blog) => blog.post_id === parseInt(req.params.id),
+        );
         if (!blog) {
           res.status(404).json({ message: 'No post found with that ID' });
         } else {
@@ -54,7 +55,10 @@ router.post('/blog', (req, res) => {
     } else {
       let blogs = JSON.parse(data);
       // Determine the new post_id by finding the maximum post_id in the array and adding 1
-      const newPostId = blogs.length === 0 ? 1 : Math.max(...blogs.map(blog => blog.post_id)) + 1;
+      const newPostId =
+        blogs.length === 0
+          ? 1
+          : Math.max(...blogs.map((blog) => blog.post_id)) + 1;
       const newBlogPost = {
         post_id: newPostId,
         title: req.body.title,
@@ -74,6 +78,66 @@ router.post('/blog', (req, res) => {
   });
 });
 
+// update a blog post by id
+// PUT - /api/blog/:id - update a blog post by ID
+router.put('/api/blogPosts/:id', async (req, res) => {
+  const id = req.params.id; // get the id from the request params
+  const updatedPost = req.body; // get the updated post from the request body
+  try {
+    const data = await fs.readFile(dbPath, 'utf8'); // read the file
+    // Parse the JSON data and update the post
+    let posts = JSON.parse(data);
+    let postIndex = posts.findIndex((post) => post.id === id);
+    if (postIndex !== -1) {
+      posts[postIndex] = updatedPost;
+
+      // Write the updated posts back to the file
+      await fs.writeFile(
+        './api/blogPosts.json',
+        JSON.stringify(posts, null, 2),
+      );
+
+      res.json(updatedPost);
+    } else {
+      res.status(404).json({ message: 'Post not found' });
+    }
+  } catch (err) {
+    console.error(`Error: ${err}`);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DELETE a blog post by id
+// DELETE - /api/blog/:id - delete a blog post by ID
+
+router.delete('/api/blogPosts/:id', async (req, res) => {
+  const id = req.params.id; // Get the id from the request parameters
+
+  try {
+    // Read the existing posts
+    const data = await fs.readFile('./api/blogposts.json', 'utf8');
+
+    // Parse the JSON data and remove the post
+    let posts = JSON.parse(data);
+    let postIndex = posts.findIndex((post) => post.id === id);
+    if (postIndex !== -1) {
+      let deletedPost = posts.splice(postIndex, 1);
+
+      // Write the updated posts back to the file
+      await fs.writeFile(
+        './api/blogPosts.json',
+        JSON.stringify(posts, null, 2),
+      );
+
+      res.json(deletedPost[0]);
+    } else {
+      res.status(404).json({ message: 'Post not found' });
+    }
+  } catch (err) {
+    console.error(`Error: ${err}`);
+    res.status(500).json({ message: err.message });
+  }
+});
 
 module.exports = router;
 
